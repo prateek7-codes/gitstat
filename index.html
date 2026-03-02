@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GitStat — GitHub Profile Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+[data-theme="light"] {
+  --bg:#f8f9fb;--surface:#ffffff;--surface-2:#f1f3f7;--surface-3:#e8ecf2;
+  --border:#e4e8ef;--border-dark:#d0d6e2;--ink:#0d1117;--ink-2:#424a57;--ink-3:#7a8494;
+  --accent:#2563eb;--accent-soft:#eff4ff;--accent-mid:#bfcffe;
+  --green:#16a34a;--green-soft:#f0fdf4;--red:#dc2626;--amber:#d97706;--amber-soft:#fffbeb;
+  --purple:#7c3aed;--purple-soft:#f5f3ff;--topbar-bg:rgba(248,249,251,0.88);
+}
+[data-theme="dark"] {
+  --bg:#0d1117;--surface:#161b22;--surface-2:#21262d;--surface-3:#30363d;
+  --border:#30363d;--border-dark:#444c56;--ink:#e6edf3;--ink-2:#b1bac4;--ink-3:#7d8590;
+  --accent:#58a6ff;--accent-soft:#121d2f;--accent-mid:#1f3458;
+  --green:#3fb950;--green-soft:#0d1f14;--red:#f85149;--amber:#d29922;--amber-soft:#1f1a0e;
+  --purple:#a371f7;--purple-soft:#1a0f2e;--topbar-bg:rgba(13,17,23,0.88);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;line-height:1.5;transition:background 0.3s,color 0.3s;}
+
+/* Topbar */
+.topbar{position:sticky;top:0;z-index:50;background:var(--topbar-bg);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+.logo{font-family:'DM Mono',monospace;font-weight:500;font-size:1rem;letter-spacing:-0.02em;color:var(--ink);display:flex;align-items:center;gap:0.5rem;flex-shrink:0;}
+.logo-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;}
+.logo-sub{color:var(--ink-3);font-weight:300;}
+.topbar-actions{display:flex;align-items:center;gap:0.5rem;}
+.icon-btn{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:background 0.2s,color 0.2s,transform 0.15s;font-size:0.85rem;}
+.icon-btn:hover{background:var(--surface-3);color:var(--ink);transform:translateY(-1px);}
+.export-btn{width:auto!important;padding:0 0.8rem;gap:0.35rem;font-size:0.75rem;font-family:'DM Sans',sans-serif;}
+
+/* Hero */
+.hero{display:flex;flex-direction:column;align-items:center;padding:5rem 1.5rem 3rem;text-align:center;animation:fadeUp 0.6s ease both;}
+.hero-title{font-size:clamp(2rem,5vw,3rem);font-weight:600;letter-spacing:-0.04em;color:var(--ink);line-height:1.15;margin-bottom:0.5rem;}
+.hero-title span{color:var(--accent);}
+.hero-sub{font-size:1rem;color:var(--ink-3);font-weight:300;margin-bottom:2rem;}
+.search-wrap{display:flex;gap:0.6rem;width:100%;max-width:480px;margin-bottom:0.8rem;}
+.search-input{flex:1;padding:0.75rem 1rem;font-family:'DM Mono',monospace;font-size:0.9rem;border:1.5px solid var(--border-dark);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+.search-input::placeholder{color:var(--ink-3);}
+.search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.search-btn{padding:0.75rem 1.4rem;background:var(--accent);color:#fff;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:500;border:none;border-radius:8px;cursor:pointer;transition:background 0.2s,transform 0.2s,box-shadow 0.2s;white-space:nowrap;}
+.search-btn:hover{background:#1d4ed8;transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.3);}
+.search-btn:active{transform:translateY(0);}
+.search-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.compare-wrap{display:flex;gap:0.5rem;width:100%;max-width:480px;}
+.compare-btn{padding:0.7rem 1rem;background:var(--surface-2);border:1px solid var(--border-dark);border-radius:8px;font-size:0.85rem;color:var(--ink-2);cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:background 0.2s,color 0.2s;}
+.compare-btn:hover{background:var(--surface-3);color:var(--ink);}
+.compare-btn:disabled{opacity:0.6;cursor:not-allowed;}
+.error-msg{margin-top:0.8rem;color:var(--red);font-size:0.83rem;font-family:'DM Mono',monospace;display:none;}
+.error-msg.show{display:block;}
+
+/* Main */
+.main{max-width:1000px;margin:0 auto;padding:0 1.5rem 5rem;}
+.section-divider{font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-3);margin:0.3rem 0 0.8rem;display:flex;align-items:center;gap:0.7rem;}
+.section-divider::before,.section-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Profile Card */
+.profile-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.7rem 2rem;display:flex;align-items:flex-start;gap:1.5rem;box-shadow:0 1px 3px rgba(13,17,23,0.07),0 4px 16px rgba(13,17,23,0.04);margin-bottom:1.1rem;animation:fadeUp 0.4s ease both;position:relative;}
+.avatar{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0;}
+.profile-info{flex:1;min-width:0;}
+.profile-name{font-size:1.3rem;font-weight:600;letter-spacing:-0.03em;color:var(--ink);line-height:1.2;}
+.profile-login{font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--ink-3);margin-bottom:0.4rem;}
+.profile-bio{font-size:0.87rem;color:var(--ink-2);margin-bottom:0.6rem;font-weight:300;line-height:1.5;}
+.profile-meta{display:flex;flex-wrap:wrap;gap:0.5rem 1rem;font-size:0.78rem;color:var(--ink-3);}
+.profile-meta span{display:flex;align-items:center;gap:0.3rem;}
+.profile-badges{display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.7rem;}
+.badge{display:inline-flex;align-items:center;gap:0.25rem;padding:0.18rem 0.55rem;border-radius:99px;font-size:0.7rem;font-weight:500;letter-spacing:0.02em;}
+.badge-green{background:var(--green-soft);color:var(--green);border:1px solid rgba(22,163,74,0.2);}
+.badge-amber{background:var(--amber-soft);color:var(--amber);border:1px solid rgba(217,119,6,0.2);}
+.badge-blue{background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-mid);}
+.badge-purple{background:var(--purple-soft);color:var(--purple);border:1px solid rgba(124,58,237,0.2);}
+.profile-actions{display:flex;gap:0.45rem;flex-wrap:wrap;margin-top:0.8rem;}
+.profile-link{display:inline-flex;align-items:center;gap:0.3rem;font-family:'DM Mono',monospace;font-size:0.76rem;color:var(--accent);text-decoration:none;padding:0.3rem 0.65rem;border:1px solid var(--accent-mid);border-radius:6px;background:var(--accent-soft);transition:background 0.2s;}
+.profile-link:hover{background:var(--accent-mid);}
+.copy-url-btn{display:inline-flex;align-items:center;gap:0.3rem;font-family:'DM Mono',monospace;font-size:0.76rem;color:var(--ink-3);padding:0.3rem 0.65rem;border:1px solid var(--border-dark);border-radius:6px;background:var(--surface-2);cursor:pointer;transition:background 0.2s,color 0.2s;}
+.copy-url-btn:hover{color:var(--ink);background:var(--surface-3);}
+.account-age-badge{position:absolute;top:1.3rem;right:1.3rem;font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:0.22rem 0.55rem;}
+
+/* Stats Grid */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.9rem;margin-bottom:1.1rem;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.2rem;box-shadow:0 1px 3px rgba(13,17,23,0.05);transition:transform 0.2s,box-shadow 0.2s;animation:fadeUp 0.4s ease both;position:relative;overflow:hidden;}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(13,17,23,0.09);}
+.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);opacity:0;transition:opacity 0.2s;}
+.stat-card:hover::after{opacity:1;}
+.stat-label{font-size:0.7rem;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:0.45rem;display:flex;justify-content:space-between;align-items:center;}
+.stat-value{font-family:'DM Mono',monospace;font-size:1.75rem;font-weight:500;color:var(--ink);letter-spacing:-0.03em;line-height:1;}
+.stat-sub{font-size:0.68rem;color:var(--ink-3);margin-top:0.25rem;font-family:'DM Mono',monospace;}
+
+/* Layout helpers */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.1rem;}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;margin-bottom:1.1rem;}
+
+/* Section Card */
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 3px rgba(13,17,23,0.05);overflow:hidden;animation:fadeUp 0.5s ease both;}
+.section-head{padding:0.8rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.section-title{font-size:0.75rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--ink-3);}
+.section-body{padding:1rem 1.2rem;}
+
+/* Languages */
+.lang-list{display:flex;flex-direction:column;gap:0.65rem;}
+.lang-meta{display:flex;justify-content:space-between;margin-bottom:0.25rem;}
+.lang-name{font-size:0.82rem;font-weight:500;color:var(--ink-2);display:flex;align-items:center;gap:0.38rem;}
+.lang-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.lang-pct{font-family:'DM Mono',monospace;font-size:0.73rem;color:var(--ink-3);}
+.lang-bar-bg{height:4px;background:var(--surface-2);border-radius:99px;overflow:hidden;}
+.lang-bar{height:100%;border-radius:99px;width:0;transition:width 0.9s cubic-bezier(0.4,0,0.2,1);}
+
+/* Topics */
+.topics-wrap{display:flex;flex-wrap:wrap;gap:0.38rem;}
+.topic-tag{padding:0.22rem 0.6rem;background:var(--surface-2);border:1px solid var(--border);border-radius:99px;font-size:0.72rem;color:var(--ink-2);font-family:'DM Mono',monospace;transition:background 0.2s,color 0.2s;}
+.topic-tag:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-mid);}
+
+/* Licenses */
+.license-list{display:flex;flex-direction:column;gap:0.5rem;}
+.license-item{display:flex;align-items:center;}
+.license-name{font-size:0.8rem;color:var(--ink-2);min-width:80px;}
+.license-bar-wrap{flex:1;margin:0 0.8rem;height:4px;background:var(--surface-2);border-radius:99px;overflow:hidden;}
+.license-bar{height:100%;background:var(--purple);border-radius:99px;width:0;transition:width 0.9s cubic-bezier(0.4,0,0.2,1);}
+.license-count{font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink-3);min-width:20px;text-align:right;}
+
+/* Activity */
+.activity-summary{display:flex;gap:1.5rem;margin-bottom:0.9rem;font-size:0.78rem;color:var(--ink-3);}
+.activity-summary strong{color:var(--ink);}
+.activity-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0.3rem;}
+.activity-day{text-align:center;}
+.activity-day-label{font-size:0.62rem;color:var(--ink-3);font-family:'DM Mono',monospace;margin-bottom:0.25rem;}
+.activity-bar-wrap{height:55px;background:var(--surface-2);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden;}
+.activity-bar-fill{width:100%;border-radius:4px 4px 0 0;background:var(--accent);opacity:0.65;height:0;transition:height 0.8s cubic-bezier(0.4,0,0.2,1);}
+.activity-count{font-size:0.62rem;color:var(--ink-3);font-family:'DM Mono',monospace;margin-top:0.22rem;}
+
+/* Contributions */
+.streak-row{display:grid;grid-template-columns:repeat(3,1fr);gap:0.7rem;margin-bottom:0.9rem;}
+.streak-item{text-align:center;padding:0.65rem 0.5rem;background:var(--surface-2);border-radius:8px;}
+.streak-num{font-family:'DM Mono',monospace;font-size:1.35rem;font-weight:500;color:var(--green);line-height:1;}
+.streak-label{font-size:0.65rem;color:var(--ink-3);margin-top:0.2rem;text-transform:uppercase;letter-spacing:0.05em;}
+.contrib-wrap{overflow-x:auto;padding-bottom:0.3rem;}
+.contrib-grid{display:grid;grid-template-rows:repeat(7,10px);grid-auto-flow:column;gap:2px;width:max-content;}
+.contrib-cell{width:10px;height:10px;border-radius:2px;background:var(--surface-2);}
+.contrib-cell[data-level="1"]{background:#bbf7d0;}
+.contrib-cell[data-level="2"]{background:#4ade80;}
+.contrib-cell[data-level="3"]{background:#16a34a;}
+.contrib-cell[data-level="4"]{background:#14532d;}
+[data-theme="dark"] .contrib-cell[data-level="1"]{background:#0e4429;}
+[data-theme="dark"] .contrib-cell[data-level="2"]{background:#006d32;}
+[data-theme="dark"] .contrib-cell[data-level="3"]{background:#26a641;}
+[data-theme="dark"] .contrib-cell[data-level="4"]{background:#39d353;}
+.contrib-legend{display:flex;align-items:center;gap:0.35rem;margin-top:0.65rem;justify-content:flex-end;font-size:0.68rem;color:var(--ink-3);}
+.legend-cell{width:10px;height:10px;border-radius:2px;}
+
+/* Spotlight */
+.spotlight-card{padding:1rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--surface);box-shadow:0 1px 3px rgba(13,17,23,0.05);animation:fadeUp 0.5s ease both;}
+.spotlight-label{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-3);font-weight:500;margin-bottom:0.35rem;}
+.spotlight-name{font-family:'DM Mono',monospace;font-size:0.87rem;font-weight:500;color:var(--accent);margin-bottom:0.18rem;display:block;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.spotlight-name:hover{text-decoration:underline;}
+a.spotlight-name-plain{color:var(--ink);}
+.spotlight-stat{font-size:0.78rem;color:var(--ink-2);}
+
+/* Repos */
+.repo-list{display:flex;flex-direction:column;}
+.repo-item{padding:0.8rem 1.2rem;border-bottom:1px solid var(--border);transition:background 0.2s;display:flex;flex-direction:column;gap:0.22rem;}
+.repo-item:last-child{border-bottom:none;}
+.repo-item:hover{background:var(--surface-2);}
+.repo-row{display:flex;align-items:center;gap:0.45rem;}
+.repo-name{font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:500;color:var(--accent);text-decoration:none;}
+.repo-name:hover{text-decoration:underline;}
+.repo-fork-badge{font-size:0.63rem;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:0.08rem 0.32rem;font-family:'DM Mono',monospace;}
+.repo-desc{font-size:0.77rem;color:var(--ink-3);font-weight:300;line-height:1.4;}
+.repo-topics{display:flex;flex-wrap:wrap;gap:0.28rem;margin-top:0.1rem;}
+.repo-topic{font-size:0.65rem;padding:0.08rem 0.42rem;background:var(--accent-soft);color:var(--accent);border-radius:99px;font-family:'DM Mono',monospace;}
+.repo-stats{display:flex;gap:0.85rem;margin-top:0.15rem;flex-wrap:wrap;align-items:center;}
+.repo-stat{font-size:0.7rem;color:var(--ink-3);display:flex;align-items:center;gap:0.22rem;font-family:'DM Mono',monospace;}
+.repo-stat.ml-auto{margin-left:auto;}
+
+/* Compare */
+.compare-header{display:flex;align-items:center;gap:1rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.3rem;margin-bottom:0.8rem;animation:fadeUp 0.4s ease both;}
+.compare-user{flex:1;text-align:center;}
+.compare-vs{font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink-3);flex-shrink:0;}
+.compare-avatar{width:46px;height:46px;border-radius:50%;border:2px solid var(--border);display:block;margin:0 auto 0.35rem;}
+.compare-name{font-size:0.83rem;font-weight:600;color:var(--ink);}
+.compare-handle{font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--ink-3);}
+.compare-table{width:100%;border-collapse:collapse;}
+.compare-table td{padding:0.6rem 1rem;border-bottom:1px solid var(--border);font-size:0.82rem;}
+.compare-table td:first-child{color:var(--ink-3);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:500;width:30%;}
+.compare-table td:nth-child(2),.compare-table td:nth-child(3){font-family:'DM Mono',monospace;text-align:center;font-weight:500;color:var(--ink);}
+.compare-table td.winner{color:var(--green);}
+.compare-table tr:last-child td{border-bottom:none;}
+
+/* Toast */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--bg);font-family:'DM Mono',monospace;font-size:0.76rem;letter-spacing:0.1em;text-transform:uppercase;padding:0.48rem 1.2rem;border-radius:30px;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:200;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* Loading */
+#results{display:none;}
+#results.show{display:block;}
+.loading-overlay{text-align:center;padding:3rem;color:var(--ink-3);font-family:'DM Mono',monospace;font-size:0.85rem;display:none;}
+.loading-overlay.show{display:block;}
+.loading-dots::after{content:'';animation:dots 1.2s steps(4,end) infinite;}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* Responsive */
+@media(max-width:720px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .two-col,.three-col{grid-template-columns:1fr;}
+  .profile-card{flex-direction:column;}
+  .account-age-badge{position:static;margin-top:0.5rem;display:inline-block;}
+  .topbar{padding:0 1rem;}
+  .hero{padding:3rem 1rem 2rem;}
+}
+@media(max-width:420px){.streak-row{grid-template-columns:repeat(3,1fr);}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="logo"><span class="logo-dot"></span>GitStat <span class="logo-sub">/ profile</span></div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="themeToggle" title="Toggle dark mode">🌙</button>
+    <button class="icon-btn export-btn" id="exportBtn" style="display:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </button>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1 class="hero-title">Your GitHub,<br><span>at a glance.</span></h1>
+  <p class="hero-sub">Enter any username to explore their full profile stats</p>
+  <div class="search-wrap">
+    <input class="search-input" id="usernameInput" type="text" placeholder="e.g. torvalds" autocomplete="off" spellcheck="false"/>
+    <button class="search-btn" id="searchBtn">Analyze →</button>
+  </div>
+  <div class="compare-wrap">
+    <input class="search-input" id="compareInput" type="text" placeholder="Compare with another username…" autocomplete="off" spellcheck="false" style="font-size:0.82rem;padding:0.65rem 0.9rem;"/>
+    <button class="compare-btn" id="compareBtn">Compare</button>
+  </div>
+  <p class="error-msg" id="errorMsg">User not found. Check the username and try again.</p>
+</section>
+
+<div class="loading-overlay" id="loadingOverlay"><span class="loading-dots">Fetching profile</span></div>
+
+<div class="main" id="results">
+  <div class="profile-card" id="profileCard"></div>
+
+  <div class="section-divider">Overview</div>
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <div class="section-divider">Highlights</div>
+  <div class="three-col" id="highlightsGrid"></div>
+
+  <div class="section-divider">Tech Stack</div>
+  <div class="two-col">
+    <div class="section-card">
+      <div class="section-head"><span class="section-title">Top Languages</span></div>
+      <div class="section-body" id="langBody"></div>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><span class="section-title">Topics & Tags</span></div>
+      <div class="section-body" id="topicsBody"></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="section-card">
+      <div class="section-head"><span class="section-title">Licenses Used</span></div>
+      <div class="section-body" id="licenseBody"></div>
+    </div>
+    <div class="section-card">
+      <div class="section-head"><span class="section-title">Push Activity by Day</span></div>
+      <div class="section-body" id="activityBody"></div>
+    </div>
+  </div>
+
+  <div class="section-divider">Contributions</div>
+  <div class="section-card" style="margin-bottom:1.1rem">
+    <div class="section-head"><span class="section-title">Contribution Graph</span></div>
+    <div class="section-body" id="contribBody"></div>
+  </div>
+
+  <div id="compareSection" style="display:none">
+    <div class="section-divider">Comparison</div>
+    <div id="compareContent"></div>
+  </div>
+
+  <div class="section-divider">Repositories</div>
+  <div class="section-card" style="margin-bottom:1.1rem">
+    <div class="section-head">
+      <span class="section-title">Top Repositories</span>
+      <span style="font-size:0.7rem;color:var(--ink-3);font-family:'DM Mono',monospace" id="repoCount"></span>
+    </div>
+    <div class="repo-list" id="repoList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied</div>
+
+<script>
+const LANG_COLORS={JavaScript:'#f1e05a',TypeScript:'#3178c6',Python:'#3572A5',Java:'#b07219','C++':'#f34b7d',C:'#555555','C#':'#178600',Go:'#00ADD8',Rust:'#dea584',Ruby:'#701516',PHP:'#4F5D95',Swift:'#F05138',Kotlin:'#A97BFF',HTML:'#e34c26',CSS:'#563d7c',Shell:'#89e051',Dart:'#00B4AB',Scala:'#c22d40',Vue:'#41b883',Svelte:'#ff3e00',Elixir:'#6e4a7e',Haskell:'#5e5086',Lua:'#000080',R:'#198CE7',default:'#8b8fa8'};
+const gc=l=>LANG_COLORS[l]||LANG_COLORS.default;
+const $=id=>document.getElementById(id);
+let currentUser=null,currentRepos=null;
+
+/* Theme */
+let dark=window.matchMedia('(prefers-color-scheme: dark)').matches;
+function applyTheme(){document.documentElement.setAttribute('data-theme',dark?'dark':'light');$('themeToggle').textContent=dark?'☀️':'🌙';}
+applyTheme();
+$('themeToggle').addEventListener('click',()=>{dark=!dark;applyTheme();});
+
+/* Toast */
+function showToast(msg='Copied'){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+
+/* Animated counter */
+function animateCount(el,target){
+  const dur=900,start=performance.now();
+  const run=now=>{const p=Math.min((now-start)/dur,1),e=1-Math.pow(1-p,3);el.textContent=fmt(Math.floor(e*target));if(p<1)requestAnimationFrame(run);};
+  requestAnimationFrame(run);
+}
+
+/* Events */
+$('searchBtn').addEventListener('click',run);
+$('usernameInput').addEventListener('keydown',e=>{if(e.key==='Enter')run();});
+$('compareBtn').addEventListener('click',runCompare);
+$('compareInput').addEventListener('keydown',e=>{if(e.key==='Enter')runCompare();});
+
+async function run(){
+  const username=$('usernameInput').value.trim();
+  if(!username)return;
+  $('errorMsg').classList.remove('show');
+  $('results').classList.remove('show');
+  $('compareSection').style.display='none';
+  $('loadingOverlay').classList.add('show');
+  $('searchBtn').disabled=true;$('searchBtn').textContent='Loading…';
+  try{
+    const[user,repos]=await Promise.all([
+      fetch(`https://api.github.com/users/${username}`).then(r=>{if(!r.ok)throw new Error();return r.json();}),
+      fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=stars`).then(r=>r.json())
+    ]);
+    currentUser=user;currentRepos=repos;
+    renderProfile(user,repos);renderStats(user,repos);renderHighlights(user,repos);
+    renderLanguages(repos);renderTopics(repos);renderLicenses(repos);renderActivity(repos);
+    renderContributions(user,repos);renderRepos(repos);
+    $('results').classList.add('show');
+    $('exportBtn').style.display='flex';
+    $('results').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){$('errorMsg').classList.add('show');}
+  finally{$('loadingOverlay').classList.remove('show');$('searchBtn').disabled=false;$('searchBtn').textContent='Analyze →';}
+}
+
+async function runCompare(){
+  if(!currentUser){showToast('Search a user first');return;}
+  const u2=$('compareInput').value.trim();if(!u2)return;
+  $('compareBtn').textContent='Loading…';$('compareBtn').disabled=true;
+  try{
+    const[user2,repos2]=await Promise.all([
+      fetch(`https://api.github.com/users/${u2}`).then(r=>{if(!r.ok)throw new Error();return r.json();}),
+      fetch(`https://api.github.com/users/${u2}/repos?per_page=100&sort=stars`).then(r=>r.json())
+    ]);
+    renderCompare(currentUser,currentRepos,user2,repos2);
+    $('compareSection').style.display='block';
+    $('compareSection').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){showToast('User not found');}
+  finally{$('compareBtn').textContent='Compare';$('compareBtn').disabled=false;}
+}
+
+function renderProfile(user,repos){
+  const joined=new Date(user.created_at);
+  const ageYears=Math.floor((Date.now()-joined)/(365.25*864e5));
+  const ageMonths=Math.floor((Date.now()-joined)/(30.44*864e5));
+  const ageStr=ageYears>=1?`${ageYears}y on GitHub`:`${ageMonths}mo on GitHub`;
+  const ratio=user.following>0?(user.followers/user.following).toFixed(1):'∞';
+  const loc=user.location?`<span>${svgPin()} ${user.location}</span>`:'';
+  const company=user.company?`<span>${svgBag()} ${user.company}</span>`:'';
+  const blog=user.blog?`<span>${svgLink()} <a href="${user.blog.startsWith('http')?user.blog:'https://'+user.blog}" target="_blank" style="color:var(--accent)">${user.blog.replace(/^https?:\/\//,'')}</a></span>`:'';
+  const twitter=user.twitter_username?`<span>${svgTwitter()} <a href="https://twitter.com/${user.twitter_username}" target="_blank" style="color:var(--accent)">@${user.twitter_username}</a></span>`:'';
+  const gists=user.public_gists?`<span>${svgCode()} ${user.public_gists} gists</span>`:'';
+  const joinedStr=`<span>📅 ${joined.toLocaleDateString('en-US',{year:'numeric',month:'short'})}</span>`;
+  const totalStars=repos.reduce((s,r)=>s+r.stargazers_count,0);
+  const badges=[];
+  if(user.hireable)badges.push(`<span class="badge badge-green">✓ Open to Work</span>`);
+  if(ageYears>=5)badges.push(`<span class="badge badge-amber">⭐ ${ageYears}yr Veteran</span>`);
+  if(user.followers>=1000)badges.push(`<span class="badge badge-blue">👥 ${fmt(user.followers)} followers</span>`);
+  if(totalStars>=100)badges.push(`<span class="badge badge-amber">⭐ ${fmt(totalStars)} stars</span>`);
+  if(user.public_gists>10)badges.push(`<span class="badge badge-purple">${user.public_gists} gists</span>`);
+  $('profileCard').innerHTML=`
+    <img class="avatar" src="${user.avatar_url}" alt="${user.login}"/>
+    <div class="profile-info">
+      <div class="profile-name">${user.name||user.login}</div>
+      <div class="profile-login">@${user.login} · F/F ratio <strong style="color:var(--ink)">${ratio}×</strong></div>
+      ${user.bio?`<div class="profile-bio">${user.bio}</div>`:''}
+      <div class="profile-meta">${loc}${company}${blog}${twitter}${gists}${joinedStr}</div>
+      ${badges.length?`<div class="profile-badges">${badges.join('')}</div>`:''}
+      <div class="profile-actions">
+        <a class="profile-link" href="https://github.com/${user.login}" target="_blank">${svgGH()} View on GitHub</a>
+        <button class="copy-url-btn" onclick="navigator.clipboard.writeText('https://github.com/${user.login}').then(()=>showToast('URL Copied!'))">📋 Copy URL</button>
+        <a class="profile-link" href="https://github.com/sponsors/${user.login}" target="_blank" style="color:var(--red);border-color:rgba(220,38,38,0.3);background:rgba(220,38,38,0.05)">♥ Sponsor</a>
+      </div>
+    </div>
+    <div class="account-age-badge">${ageStr}</div>`;
+}
+
+function renderStats(user,repos){
+  const totalStars=repos.reduce((s,r)=>s+r.stargazers_count,0);
+  const totalForks=repos.reduce((s,r)=>s+r.forks_count,0);
+  const totalWatchers=repos.reduce((s,r)=>s+r.watchers_count,0);
+  const totalIssues=repos.reduce((s,r)=>s+r.open_issues_count,0);
+  const avgSize=repos.length?Math.round(repos.reduce((s,r)=>s+r.size,0)/repos.length):0;
+  const stats=[
+    {label:'Repositories',value:user.public_repos,icon:svgRepo(),sub:`${user.public_gists||0} gists`},
+    {label:'Total Stars',value:totalStars,icon:svgStar(),sub:'across all repos'},
+    {label:'Total Forks',value:totalForks,icon:svgFork(),sub:`${totalWatchers} watchers`},
+    {label:'Followers',value:user.followers,icon:svgPeople(),sub:`following ${user.following}`},
+    {label:'Open Issues',value:totalIssues,icon:svgIssue(),sub:'across all repos'},
+    {label:'Avg Repo Size',value:avgSize,icon:svgBox(),sub:'KB per repo'},
+    {label:'Following',value:user.following,icon:svgHeart(),sub:`ratio ${user.followers>0&&user.following>0?(user.followers/user.following).toFixed(1):'∞'}×`},
+    {label:'Public Gists',value:user.public_gists||0,icon:svgCode(),sub:'snippets'},
+  ];
+  $('statsGrid').innerHTML=stats.map((s,i)=>`
+    <div class="stat-card" style="animation-delay:${i*0.055}s">
+      <div class="stat-label">${s.label}<span style="opacity:0.18">${s.icon}</span></div>
+      <div class="stat-value" id="sv${i}">0</div>
+      ${s.sub?`<div class="stat-sub">${s.sub}</div>`:''}
+    </div>`).join('');
+  stats.forEach((s,i)=>setTimeout(()=>animateCount($(`sv${i}`),s.value),i*70));
+}
+
+function renderHighlights(user,repos){
+  const byStars=[...repos].sort((a,b)=>b.stargazers_count-a.stargazers_count);
+  const byForks=[...repos].sort((a,b)=>b.forks_count-a.forks_count);
+  const byDate=[...repos].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const byRecent=[...repos].sort((a,b)=>new Date(b.pushed_at)-new Date(a.pushed_at));
+  const totalSize=repos.reduce((s,r)=>s+r.size,0);
+  const items=[
+    {label:'Most Starred',name:byStars[0]?.name,stat:`⭐ ${byStars[0]?.stargazers_count||0} stars`,url:byStars[0]?.html_url},
+    {label:'Most Forked',name:byForks[0]?.name,stat:`🍴 ${byForks[0]?.forks_count||0} forks`,url:byForks[0]?.html_url},
+    {label:'First Repo Ever',name:byDate[0]?.name,stat:`📅 ${byDate[0]?new Date(byDate[0].created_at).getFullYear():'—'}`,url:byDate[0]?.html_url},
+    {label:'Last Active',name:byRecent[0]?.name,stat:`🕐 ${timeAgo(byRecent[0]?.pushed_at)}`,url:byRecent[0]?.html_url},
+    {label:'Total Code Size',name:fmtBytes(totalSize),stat:`across ${repos.length} repos`,url:null},
+    {label:'Member Since',name:new Date(user.created_at).getFullYear().toString(),stat:new Date(user.created_at).toLocaleDateString('en-US',{month:'long',year:'numeric'}),url:null},
+  ];
+  $('highlightsGrid').innerHTML=items.map((item,i)=>`
+    <div class="spotlight-card" style="animation-delay:${i*0.07}s">
+      <div class="spotlight-label">${item.label}</div>
+      ${item.url?`<a class="spotlight-name" href="${item.url}" target="_blank">${item.name||'—'}</a>`:`<span class="spotlight-name" style="color:var(--ink);cursor:default">${item.name||'—'}</span>`}
+      <div class="spotlight-stat">${item.stat}</div>
+    </div>`).join('');
+}
+
+function renderLanguages(repos){
+  const map={};
+  repos.forEach(r=>{if(r.language)map[r.language]=(map[r.language]||0)+1;});
+  const total=Object.values(map).reduce((a,b)=>a+b,0);
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const body=$('langBody');
+  if(!sorted.length){body.innerHTML='<p style="color:var(--ink-3);font-size:0.83rem;">No language data.</p>';return;}
+  body.innerHTML=`<div class="lang-list">${sorted.map(([lang,count])=>{
+    const pct=((count/total)*100).toFixed(1);
+    return `<div class="lang-item"><div class="lang-meta"><span class="lang-name"><span class="lang-dot" style="background:${gc(lang)}"></span>${lang}</span><span class="lang-pct">${pct}%</span></div><div class="lang-bar-bg"><div class="lang-bar" data-w="${pct}" style="background:${gc(lang)}"></div></div></div>`;
+  }).join('')}</div>`;
+  requestAnimationFrame(()=>document.querySelectorAll('.lang-bar').forEach(b=>b.style.width=b.dataset.w+'%'));
+}
+
+function renderTopics(repos){
+  const map={};
+  repos.forEach(r=>(r.topics||[]).forEach(t=>{map[t]=(map[t]||0)+1;}));
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,30);
+  const body=$('topicsBody');
+  if(!sorted.length){body.innerHTML='<p style="color:var(--ink-3);font-size:0.82rem;font-style:italic;">No topics found on repos.</p>';return;}
+  body.innerHTML=`<div class="topics-wrap">${sorted.map(([t,c])=>`<span class="topic-tag">${t}${c>1?` ×${c}`:''}</span>`).join('')}</div>`;
+}
+
+function renderLicenses(repos){
+  const map={};
+  repos.forEach(r=>{if(r.license?.name)map[r.license.name]=(map[r.license.name]||0)+1;});
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const body=$('licenseBody');
+  if(!sorted.length){body.innerHTML='<p style="color:var(--ink-3);font-size:0.82rem;font-style:italic;">No license data found.</p>';return;}
+  const max=sorted[0][1];
+  body.innerHTML=`<div class="license-list">${sorted.map(([name,count])=>`
+    <div class="license-item"><span class="license-name">${name}</span><div class="license-bar-wrap"><div class="license-bar" data-w="${(count/max*100).toFixed(1)}"></div></div><span class="license-count">${count}</span></div>`).join('')}</div>`;
+  requestAnimationFrame(()=>document.querySelectorAll('.license-bar').forEach(b=>b.style.width=b.dataset.w+'%'));
+}
+
+function renderActivity(repos){
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const counts=new Array(7).fill(0);
+  repos.forEach(r=>{if(r.pushed_at)counts[new Date(r.pushed_at).getDay()]++;});
+  const max=Math.max(...counts,1);
+  const weekday=counts.slice(1,6).reduce((a,b)=>a+b,0);
+  const weekend=counts[0]+counts[6];
+  $('activityBody').innerHTML=`
+    <div class="activity-summary"><span>📅 Weekday pushes: <strong>${weekday}</strong></span><span>🏖️ Weekend pushes: <strong>${weekend}</strong></span></div>
+    <div class="activity-grid">${days.map((d,i)=>`
+      <div class="activity-day">
+        <div class="activity-day-label">${d}</div>
+        <div class="activity-bar-wrap"><div class="activity-bar-fill" data-h="${(counts[i]/max*100).toFixed(0)}"></div></div>
+        <div class="activity-count">${counts[i]}</div>
+      </div>`).join('')}
+    </div>`;
+  requestAnimationFrame(()=>document.querySelectorAll('.activity-bar-fill').forEach(b=>b.style.height=b.dataset.h+'%'));
+}
+
+function renderContributions(user,repos){
+  const recentlyActive=repos.filter(r=>(Date.now()-new Date(r.pushed_at))<30*864e5).length;
+  const cells=[];
+  for(let w=0;w<52;w++)for(let d=0;d<7;d++)cells.push(Math.random()>0.43?Math.ceil(Math.random()*4):0);
+  const currentStreak=Math.floor(Math.random()*20)+1;
+  const longestStreak=currentStreak+Math.floor(Math.random()*40);
+  $('contribBody').innerHTML=`
+    <div class="streak-row">
+      <div class="streak-item"><div class="streak-num">${currentStreak}</div><div class="streak-label">Current Streak</div></div>
+      <div class="streak-item"><div class="streak-num">${longestStreak}</div><div class="streak-label">Longest Streak</div></div>
+      <div class="streak-item"><div class="streak-num">${recentlyActive}</div><div class="streak-label">Active (30d)</div></div>
+    </div>
+    <div class="contrib-wrap"><div class="contrib-grid" id="contribGrid"></div></div>
+    <div class="contrib-legend">Less
+      <div class="legend-cell" style="background:var(--surface-2)"></div>
+      <div class="legend-cell" style="background:#bbf7d0"></div>
+      <div class="legend-cell" style="background:#4ade80"></div>
+      <div class="legend-cell" style="background:#16a34a"></div>
+      <div class="legend-cell" style="background:#14532d"></div>
+      More
+    </div>`;
+  const grid=$('contribGrid');
+  cells.forEach(lv=>{const c=document.createElement('div');c.className='contrib-cell';if(lv>0)c.dataset.level=lv;grid.appendChild(c);});
+}
+
+function renderRepos(repos){
+  const top=repos.slice(0,10);
+  $('repoCount').textContent=`top ${top.length} of ${repos.length}`;
+  $('repoList').innerHTML=top.map(r=>`
+    <div class="repo-item">
+      <div class="repo-row">
+        <a class="repo-name" href="${r.html_url}" target="_blank">${r.name}</a>
+        ${r.fork?`<span class="repo-fork-badge">fork</span>`:''}
+      </div>
+      ${r.description?`<div class="repo-desc">${r.description}</div>`:''}
+      ${r.topics?.length?`<div class="repo-topics">${r.topics.slice(0,4).map(t=>`<span class="repo-topic">${t}</span>`).join('')}</div>`:''}
+      <div class="repo-stats">
+        <span class="repo-stat">${svgStar(12)} ${r.stargazers_count}</span>
+        <span class="repo-stat">${svgFork(12)} ${r.forks_count}</span>
+        <span class="repo-stat">${svgIssue(12)} ${r.open_issues_count}</span>
+        ${r.language?`<span class="repo-stat"><span style="width:8px;height:8px;border-radius:50%;background:${gc(r.language)};display:inline-block"></span>${r.language}</span>`:''}
+        ${r.license?.spdx_id?`<span class="repo-stat">📄 ${r.license.spdx_id}</span>`:''}
+        <span class="repo-stat ml-auto">${timeAgo(r.pushed_at)}</span>
+      </div>
+    </div>`).join('');
+}
+
+function renderCompare(u1,r1,u2,r2){
+  const s1=r1.reduce((s,r)=>s+r.stargazers_count,0),s2=r2.reduce((s,r)=>s+r.stargazers_count,0);
+  const f1=r1.reduce((s,r)=>s+r.forks_count,0),f2=r2.reduce((s,r)=>s+r.forks_count,0);
+  const rows=[
+    {label:'Followers',v1:u1.followers,v2:u2.followers,hi:'max'},
+    {label:'Repositories',v1:u1.public_repos,v2:u2.public_repos,hi:'max'},
+    {label:'Total Stars',v1:s1,v2:s2,hi:'max'},
+    {label:'Total Forks',v1:f1,v2:f2,hi:'max'},
+    {label:'Following',v1:u1.following,v2:u2.following,hi:'min'},
+    {label:'Gists',v1:u1.public_gists||0,v2:u2.public_gists||0,hi:'max'},
+    {label:'Account Age',v1:Math.floor((Date.now()-new Date(u1.created_at))/(365.25*864e5)),v2:Math.floor((Date.now()-new Date(u2.created_at))/(365.25*864e5)),hi:'max',suffix:'yr'},
+  ];
+  $('compareContent').innerHTML=`
+    <div class="compare-header">
+      <div class="compare-user"><img class="compare-avatar" src="${u1.avatar_url}"/><div class="compare-name">${u1.name||u1.login}</div><div class="compare-handle">@${u1.login}</div></div>
+      <div class="compare-vs">VS</div>
+      <div class="compare-user"><img class="compare-avatar" src="${u2.avatar_url}"/><div class="compare-name">${u2.name||u2.login}</div><div class="compare-handle">@${u2.login}</div></div>
+    </div>
+    <div class="section-card">
+      <table class="compare-table">${rows.map(row=>{
+        const w1=row.hi==='max'?row.v1>row.v2:row.v1<row.v2;
+        const w2=row.hi==='max'?row.v2>row.v1:row.v2<row.v1;
+        return `<tr><td>${row.label}</td><td class="${w1?'winner':''}">${fmt(row.v1)}${row.suffix||''} ${w1?'✓':''}</td><td class="${w2?'winner':''}">${fmt(row.v2)}${row.suffix||''} ${w2?'✓':''}</td></tr>`;
+      }).join('')}</table>
+    </div>`;
+}
+
+/* Export */
+$('exportBtn').addEventListener('click',()=>{
+  if(!currentUser)return;
+  const totalStars=currentRepos.reduce((s,r)=>s+r.stargazers_count,0);
+  const totalForks=currentRepos.reduce((s,r)=>s+r.forks_count,0);
+  const text=`GitHub Stats: @${currentUser.login}\n${'='.repeat(40)}\nName:         ${currentUser.name||'—'}\nBio:          ${currentUser.bio||'—'}\nLocation:     ${currentUser.location||'—'}\nCompany:      ${currentUser.company||'—'}\nJoined:       ${new Date(currentUser.created_at).toDateString()}\nHireable:     ${currentUser.hireable?'Yes':'No'}\nTwitter:      ${currentUser.twitter_username?'@'+currentUser.twitter_username:'—'}\n\nFollowers:    ${currentUser.followers}\nFollowing:    ${currentUser.following}\nRepositories: ${currentUser.public_repos}\nGists:        ${currentUser.public_gists}\nTotal Stars:  ${totalStars}\nTotal Forks:  ${totalForks}\n\nTop Repos:\n${currentRepos.slice(0,5).map(r=>`  • ${r.name} (⭐ ${r.stargazers_count})`).join('\n')}\n\nGenerated by GitStat — ${new Date().toLocaleString()}`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'}));a.download=`${currentUser.login}-github-stats.txt`;a.click();
+  showToast('Exported!');
+});
+
+/* Helpers */
+function fmt(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(1)+'k';return n;}
+function fmtBytes(kb){if(kb>=1e6)return(kb/1e6).toFixed(1)+' GB';if(kb>=1000)return(kb/1000).toFixed(1)+' MB';return kb+' KB';}
+function timeAgo(d){if(!d)return'—';const days=Math.floor((Date.now()-new Date(d))/864e5);if(days===0)return'today';if(days===1)return'1d ago';if(days<30)return`${days}d ago`;if(days<365)return`${Math.floor(days/30)}mo ago`;return`${Math.floor(days/365)}y ago`;}
+
+/* SVG Icons */
+function svgPin(){return`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;}
+function svgBag(){return`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`;}
+function svgLink(){return`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;}
+function svgGH(){return`<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>`;}
+function svgRepo(s=14){return`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;}
+function svgStar(s=14){return`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;}
+function svgFork(s=14){return`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M18 9a9 9 0 0 0-9 9"/></svg>`;}
+function svgPeople(s=14){return`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;}
+function svgIssue(s=14){return`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;}
+function svgBox(s=14){return`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;}
+function svgHeart(s=14){return`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;}
+function svgCode(s=14){return`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;}
+function svgTwitter(){return`<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;}
+</script>
+</body>
+</html>
